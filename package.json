@@ -12,7 +12,10 @@
     "typecheck": "tsc --noEmit",
     "sources": "tsx scripts/probe-sources.ts",
     "smoke": "tsx scripts/smoke-collect.ts",
-    "db:check": "tsx scripts/db-check.ts"
+    "db:check": "tsx scripts/db-check.ts",
+    "stage1:check": "tsx scripts/stage1-check.ts",
+    "stage1:corpus": "tsx scripts/stage1-corpus.ts",
+    "verify": "npm run typecheck && npm run db:check && npm run stage1:check"
   },
   "dependencies": {
     "yaml": "^2.6.1"
