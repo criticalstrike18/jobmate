@@ -1,0 +1,73 @@
+# JobMate source configuration.
+#
+# There is no API that enumerates ATS job boards, so this list is curated.
+# Every token below was verified live via `npm run sources`. When adding
+# entries, probe first -- companies migrate off platforms or disable public
+# boards regularly, and a dead token 404s on every fetch.
+#
+# Run `npx tsx scripts/probe-sources.ts` to re-verify.
+
+boards:
+  - ats: greenhouse
+    token: gitlab
+    label: GitLab
+  - ats: greenhouse
+    token: datadog
+    label: Datadog
+  - ats: greenhouse
+    token: stripe
+    label: Stripe
+  - ats: greenhouse
+    token: cloudflare
+    label: Cloudflare
+  - ats: greenhouse
+    token: figma
+    label: Figma
+  - ats: greenhouse
+    token: robinhood
+    label: Robinhood
+  - ats: greenhouse
+    token: discord
+    label: Discord
+  - ats: greenhouse
+    token: dropbox
+    label: Dropbox
+  - ats: greenhouse
+    token: instacart
+    label: Instacart
+  - ats: greenhouse
+    token: reddit
+    label: Reddit
+  - ats: greenhouse
+    token: airbnb
+    label: Airbnb
+  - ats: lever
+    token: spotify
+    label: Spotify
+  - ats: ashby
+    token: ramp
+    label: Ramp
+  - ats: ashby
+    token: notion
+    label: Notion
+  - ats: ashby
+    token: openai
+    label: OpenAI
+  - ats: ashby
+    token: linear
+    label: Linear
+
+feeds:
+  # No key required. Aggregates Greenhouse/SmartRecruiters/Recruitee/Join/TeamTailor.
+  arbeitnow:
+    enabled: true
+    trustTier: aggregator
+  arbeitnowUk:
+    enabled: false
+    trustTier: aggregator
+  # Keyless, but terms require linking back to remotive.com and crediting
+  # Remotive as the source. Republishing to third-party job boards is
+  # prohibited. See src/sources/remotive.ts.
+  remotive:
+    enabled: true
+    trustTier: rss
