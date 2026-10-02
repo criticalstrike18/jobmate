@@ -11,7 +11,8 @@
     "start": "tsx src/server/index.ts",
     "typecheck": "tsc --noEmit",
     "sources": "tsx scripts/probe-sources.ts",
-    "smoke": "tsx scripts/smoke-collect.ts"
+    "smoke": "tsx scripts/smoke-collect.ts",
+    "db:check": "tsx scripts/db-check.ts"
   },
   "dependencies": {
     "yaml": "^2.6.1"
