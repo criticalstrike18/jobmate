@@ -1,6 +1,15 @@
 export type OAuthProviderType = 'google' | 'github' | 'gitlab';
 
-export type AuthFlowView = 'main' | 'google-flow' | 'github-flow' | 'gitlab-flow' | 'authenticated';
+export type AuthFlowView = 
+  | 'main' 
+  | 'google-flow' 
+  | 'github-flow' 
+  | 'gitlab-flow' 
+  | 'authenticated'
+  | 'connect-engines'
+  | 'gemini-key-flow'
+  | 'generic-key-flow'
+  | 'engines-ready';
 
 export interface AuthUser {
   uid: string;

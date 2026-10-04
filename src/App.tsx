@@ -6,7 +6,14 @@ export function App() {
   const [currentScreen, setCurrentScreen] = useState<'home' | 'login'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('view') === 'login' || window.location.pathname === '/login') {
+      const view = params.get('view');
+      if (
+        view === 'login' || 
+        view === 'engines' || 
+        view === 'connect-engines' || 
+        view === 'gemini-key' || 
+        window.location.pathname === '/login'
+      ) {
         return 'login';
       }
     }
