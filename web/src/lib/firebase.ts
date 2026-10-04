@@ -101,21 +101,43 @@ export const signInWithGitlab = async (): Promise<AuthUser> => {
   if (!auth) {
     throw new Error('FIREBASE_NOT_CONFIGURED');
   }
-  try {
-    const result = await signInWithPopup(auth, gitlabProvider);
-    return formatFirebaseUser(result.user, 'gitlab.com');
-  } catch (err: any) {
-    // Fallback if the provider ID in Firebase was registered as 'gitlab.com' instead of 'oidc.gitlab'
-    if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/invalid-provider-id') {
-      const fallbackProvider = new OAuthProvider('gitlab.com');
-      fallbackProvider.addScope('openid');
-      fallbackProvider.addScope('profile');
-      fallbackProvider.addScope('email');
-      const fallbackResult = await signInWithPopup(auth, fallbackProvider);
-      return formatFirebaseUser(fallbackResult.user, 'gitlab.com');
+
+  // Candidate provider IDs commonly configured in Firebase Console for GitLab OIDC
+  const candidateIds = [
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_GITLAB_PROVIDER_ID) || 'oidc.gitlab',
+    'oidc.gitlab.com',
+    'gitlab.com',
+    'gitlab'
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  let lastError: any = null;
+
+  for (const providerId of candidateIds) {
+    try {
+      const provider = new OAuthProvider(providerId);
+      provider.addScope('openid');
+      provider.addScope('profile');
+      provider.addScope('email');
+      provider.addScope('read_user');
+      provider.addScope('read_api');
+      const result = await signInWithPopup(auth, provider);
+      return formatFirebaseUser(result.user, 'gitlab.com');
+    } catch (err: any) {
+      lastError = err;
+      // If error indicates provider not registered with this ID, try next candidate
+      if (
+        err?.code === 'auth/operation-not-allowed' || 
+        err?.code === 'auth/invalid-provider-id' || 
+        err?.code === 'auth/configuration-not-found'
+      ) {
+        continue;
+      }
+      // If user closed popup, canceled, or other real error, stop immediately
+      throw err;
     }
-    throw err;
   }
+
+  throw lastError || new Error('GitLab OIDC provider not found. Please ensure the provider in Firebase Authentication is named "oidc.gitlab".');
 };
 
 /**
