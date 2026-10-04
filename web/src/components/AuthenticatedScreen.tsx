@@ -5,9 +5,10 @@ import type { AuthUser } from '../types/auth';
 interface AuthenticatedScreenProps {
   user: AuthUser;
   onLogout: () => void;
+  onContinueToEngines?: () => void;
 }
 
-export const AuthenticatedScreen: React.FC<AuthenticatedScreenProps> = ({ user, onLogout }) => {
+export const AuthenticatedScreen: React.FC<AuthenticatedScreenProps> = ({ user, onLogout, onContinueToEngines }) => {
   return (
     <div className={THEME.layout.centerContainer}>
       
@@ -53,11 +54,20 @@ export const AuthenticatedScreen: React.FC<AuthenticatedScreenProps> = ({ user, 
         <span>Connected via {user.providerId.replace('.com', '')}</span>
       </div>
 
-      {/* Sign Out Pill Action */}
+      {/* Actions */}
       <div 
         className="animate-entrance w-full mt-7 sm:mt-8 flex flex-col gap-3"
         style={{ animationDelay: '280ms' }}
       >
+        {onContinueToEngines && (
+          <button
+            type="button"
+            onClick={onContinueToEngines}
+            className={`pill-bloom ${THEME.buttons.base} border border-transparent bg-[#0284c7] hover:bg-[#0369a1] text-white shadow-sky-500/20`}
+          >
+            <span>Continue to AI Engines Setup →</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onLogout}
