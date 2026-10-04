@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { HomeScreen } from './components/HomeScreen';
 import { LoginScreen } from './components/LoginScreen';
-import { ExplainerPreview } from './explainer/ExplainerPreview';
+
+const ExplainerPreview = lazy(() =>
+  import('./explainer/ExplainerPreview').then((m) => ({ default: m.ExplainerPreview })),
+);
 
 export function App() {
   const [currentScreen, setCurrentScreen] = useState<'home' | 'login' | 'explainer'>(() => {
@@ -59,7 +62,11 @@ export function App() {
   }, []);
 
   if (currentScreen === 'explainer') {
-    return <ExplainerPreview />;
+    return (
+      <Suspense fallback={<div className="p-8 text-sm text-slate-500 font-sans">Loading explainer…</div>}>
+        <ExplainerPreview />
+      </Suspense>
+    );
   }
 
   if (currentScreen === 'login') {
