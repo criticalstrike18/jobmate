@@ -17,6 +17,7 @@ import { AuthenticatedScreen } from './AuthenticatedScreen';
 import { ConnectEnginesScreen } from './ConnectEnginesScreen';
 import { GeminiKeyFlowScreen } from './GeminiKeyFlowScreen';
 import { GenericKeyFlowScreen } from './GenericKeyFlowScreen';
+import { ResumeUploadScreen } from './ResumeUploadScreen';
 import { EnginesReadyScreen } from './EnginesReadyScreen';
 
 interface LoginScreenProps {
@@ -32,10 +33,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
       const view = params.get('view');
       if (view === 'engines' || view === 'connect-engines') return 'connect-engines';
       if (view === 'gemini-key' || view === 'gemini') return 'gemini-key-flow';
+      if (view === 'upload-resume' || view === 'resume') return 'upload-resume';
       if (view === 'ready' || view === 'engines-ready') return 'engines-ready';
 
       const savedView = localStorage.getItem('jobmate_active_view') as AuthFlowView | null;
-      if (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'engines-ready'].includes(savedView)) {
+      if (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'upload-resume', 'engines-ready'].includes(savedView)) {
         return savedView;
       }
     }
@@ -60,7 +62,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
   const navigateToView = (view: AuthFlowView) => {
     setCurrentView(view);
     if (typeof window !== 'undefined') {
-      if (['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'engines-ready', 'authenticated'].includes(view)) {
+      if (['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'upload-resume', 'engines-ready', 'authenticated'].includes(view)) {
         localStorage.setItem('jobmate_active_view', view);
       } else {
         localStorage.removeItem('jobmate_active_view');
@@ -86,12 +88,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
         const geminiConnected = isKeyConnected('gemini');
 
         const inMiddleOfFlow = 
-          (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow'].includes(savedView)) ||
+          (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'upload-resume'].includes(savedView)) ||
           !geminiConnected;
 
         if (inMiddleOfFlow) {
           // Restore the previous screen where the user left off in the middle
-          const viewToResume = (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow'].includes(savedView))
+          const viewToResume = (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'upload-resume'].includes(savedView))
             ? savedView
             : 'connect-engines';
           navigateToView(viewToResume);
@@ -148,7 +150,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
           }
           navigateToView('generic-key-flow');
         }}
-        onContinue={() => navigateToView('engines-ready')}
+        onContinue={() => navigateToView('upload-resume')}
         isGitHubConnected={currentUser ? currentUser.providerId.includes('github') : true}
       />
     );
@@ -173,10 +175,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
     );
   }
 
+  if (currentView === 'upload-resume') {
+    return (
+      <ResumeUploadScreen
+        onBack={() => navigateToView('connect-engines')}
+        onSuccess={(_data) => {
+          navigateToView('engines-ready');
+        }}
+      />
+    );
+  }
+
   if (currentView === 'engines-ready') {
     return (
       <EnginesReadyScreen
-        onBackToEngines={() => navigateToView('connect-engines')}
+        onBackToEngines={() => navigateToView('upload-resume')}
         onNavigateHome={onNavigateHome}
       />
     );

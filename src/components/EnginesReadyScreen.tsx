@@ -2,6 +2,7 @@ import React from 'react';
 import { THEME } from '../constants/theme';
 import { RevolvingAtmosphere } from './RevolvingAtmosphere';
 import { getStoredKey } from '../lib/keys';
+import { getStoredResume } from '../lib/resume';
 
 interface EnginesReadyScreenProps {
   onBackToEngines: () => void;
@@ -13,6 +14,7 @@ export const EnginesReadyScreen: React.FC<EnginesReadyScreenProps> = ({
   onNavigateHome,
 }) => {
   const geminiKey = getStoredKey('gemini');
+  const parsedResume = getStoredResume();
 
   return (
     <div className={`relative min-h-[100dvh] w-full ${THEME.canvasBg} text-slate-900 flex flex-col justify-between overflow-x-hidden selection:bg-sky-100 selection:text-sky-900 font-sans`}>
@@ -49,25 +51,58 @@ export const EnginesReadyScreen: React.FC<EnginesReadyScreenProps> = ({
             AI Engine Connected
           </h1>
 
-          <p className="animate-entrance text-[14px] sm:text-[15px] text-slate-500 mt-2 mb-6 leading-relaxed max-w-[360px]">
-            Google Gemini 3.5 Flash is verified and calibrated for multimodal resume parsing and proof substantiation.
+          <p className="animate-entrance text-[14px] sm:text-[15px] text-slate-500 mt-2 mb-6 leading-relaxed max-w-[380px]">
+            {parsedResume 
+              ? `${parsedResume.fileName} parsed via Gemini 3.5 Flash Vision. Skills and codebase proof are calibrated.`
+              : 'Google Gemini 3.5 Flash is verified and calibrated for multimodal resume parsing and proof substantiation.'
+            }
           </p>
 
-          <div className="animate-entrance w-full p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs text-left mb-6 space-y-2">
+          <div className="animate-entrance w-full p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs text-left mb-6 space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-500 font-medium">Model Route:</span>
               <span className="font-mono text-emerald-600 font-semibold">gemini-3.5-flash-lite</span>
             </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">Latency Status:</span>
-              <span className="text-slate-700">Sub-200ms Active</span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">Key Storage:</span>
-              <span className="text-slate-700 font-mono">
-                {geminiKey ? `${geminiKey.slice(0, 6)}••••••••` : 'Active'}
-              </span>
-            </div>
+            {parsedResume ? (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Verified Resume:</span>
+                  <span className="text-slate-800 font-semibold truncate max-w-[190px]">{parsedResume.fileName}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Experience Proof:</span>
+                  <span className="text-slate-700 font-medium">{parsedResume.experienceYears}+ Years · {parsedResume.title || 'Full Stack'}</span>
+                </div>
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-[11px] text-slate-400 font-medium block mb-1.5">Extracted Core Skills:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {parsedResume.skills.slice(0, 6).map((skill) => (
+                      <span key={skill} className="px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-sky-50 text-sky-700 border border-sky-200/60">
+                        {skill}
+                      </span>
+                    ))}
+                    {parsedResume.skills.length > 6 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] text-slate-400">
+                        +{parsedResume.skills.length - 6} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Latency Status:</span>
+                  <span className="text-slate-700">Sub-200ms Active</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Key Storage:</span>
+                  <span className="text-slate-700 font-mono">
+                    {geminiKey ? `${geminiKey.slice(0, 6)}••••••••` : 'Active'}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Action Button */}
@@ -85,7 +120,7 @@ export const EnginesReadyScreen: React.FC<EnginesReadyScreenProps> = ({
               onClick={onBackToEngines}
               className="w-full h-[50px] rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium flex items-center justify-center transition-all cursor-pointer"
             >
-              <span>Manage Engine Keys</span>
+              <span>Manage Engine Keys & Resume</span>
             </button>
           </div>
 

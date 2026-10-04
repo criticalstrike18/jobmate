@@ -9,6 +9,7 @@ export type AuthFlowView =
   | 'connect-engines'
   | 'gemini-key-flow'
   | 'generic-key-flow'
+  | 'upload-resume'
   | 'engines-ready';
 
 export interface AuthUser {

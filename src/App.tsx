@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
 import { HomeScreen } from './components/HomeScreen';
 import { LoginScreen } from './components/LoginScreen';
+import { ExplainerPreview } from './explainer/ExplainerPreview';
 
 export function App() {
-  const [currentScreen, setCurrentScreen] = useState<'home' | 'login'>(() => {
+  const [currentScreen, setCurrentScreen] = useState<'home' | 'login' | 'explainer'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const view = params.get('view');
+      if (view === 'explainer') {
+        return 'explainer';
+      }
       if (
         view === 'login' || 
         view === 'engines' || 
         view === 'connect-engines' || 
         view === 'gemini-key' || 
+        view === 'upload-resume' ||
+        view === 'resume' ||
         window.location.pathname === '/login'
       ) {
         return 'login';
@@ -21,12 +27,14 @@ export function App() {
   });
 
   // Sync URL when screen changes
-  const navigateTo = (screen: 'home' | 'login') => {
+  const navigateTo = (screen: 'home' | 'login' | 'explainer') => {
     setCurrentScreen(screen);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       if (screen === 'login') {
         url.searchParams.set('view', 'login');
+      } else if (screen === 'explainer') {
+        url.searchParams.set('view', 'explainer');
       } else {
         url.searchParams.delete('view');
       }
@@ -37,11 +45,22 @@ export function App() {
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
-      setCurrentScreen(params.get('view') === 'login' ? 'login' : 'home');
+      const view = params.get('view');
+      if (view === 'explainer') {
+        setCurrentScreen('explainer');
+      } else if (view === 'login') {
+        setCurrentScreen('login');
+      } else {
+        setCurrentScreen('home');
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  if (currentScreen === 'explainer') {
+    return <ExplainerPreview />;
+  }
 
   if (currentScreen === 'login') {
     return <LoginScreen onNavigateHome={() => navigateTo('home')} />;
