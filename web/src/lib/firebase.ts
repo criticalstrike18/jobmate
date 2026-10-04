@@ -59,7 +59,13 @@ export const githubProvider = new GithubAuthProvider();
 githubProvider.addScope('read:user');
 githubProvider.addScope('public_repo');
 
-export const gitlabProvider = new OAuthProvider('gitlab.com');
+// GitLab OIDC Provider for Firebase Authentication
+// Supports custom provider ID (e.g. 'oidc.gitlab' or 'gitlab.com')
+const gitlabProviderId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_GITLAB_PROVIDER_ID) || 'oidc.gitlab';
+export const gitlabProvider = new OAuthProvider(gitlabProviderId);
+gitlabProvider.addScope('openid');
+gitlabProvider.addScope('profile');
+gitlabProvider.addScope('email');
 gitlabProvider.addScope('read_user');
 gitlabProvider.addScope('read_repository');
 gitlabProvider.addScope('read_api');
@@ -89,14 +95,27 @@ export const signInWithGithub = async (): Promise<AuthUser> => {
 };
 
 /**
- * Sign in with GitLab (Firebase OAuthProvider)
+ * Sign in with GitLab (Firebase OIDC Provider)
  */
 export const signInWithGitlab = async (): Promise<AuthUser> => {
   if (!auth) {
     throw new Error('FIREBASE_NOT_CONFIGURED');
   }
-  const result = await signInWithPopup(auth, gitlabProvider);
-  return formatFirebaseUser(result.user, 'gitlab.com');
+  try {
+    const result = await signInWithPopup(auth, gitlabProvider);
+    return formatFirebaseUser(result.user, 'gitlab.com');
+  } catch (err: any) {
+    // Fallback if the provider ID in Firebase was registered as 'gitlab.com' instead of 'oidc.gitlab'
+    if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/invalid-provider-id') {
+      const fallbackProvider = new OAuthProvider('gitlab.com');
+      fallbackProvider.addScope('openid');
+      fallbackProvider.addScope('profile');
+      fallbackProvider.addScope('email');
+      const fallbackResult = await signInWithPopup(auth, fallbackProvider);
+      return formatFirebaseUser(fallbackResult.user, 'gitlab.com');
+    }
+    throw err;
+  }
 };
 
 /**
