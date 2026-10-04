@@ -18,6 +18,10 @@ interface LeverPosting {
   descriptionPlain?: string;
   lists?: LeverList[];
   additionalPlain?: string;
+  /** Top-level field, e.g. "remote" | "hybrid" | "onsite". The location
+   *  strings alone miss it: Spotify lists "London" with workplaceType remote. */
+  workplaceType?: string;
+  country?: string;
   categories?: {
     team?: string;
     department?: string;
@@ -28,6 +32,7 @@ interface LeverPosting {
 }
 
 function isRemote(posting: LeverPosting): boolean {
+  if (posting.workplaceType?.toLowerCase() === 'remote') return true;
   const locations = [
     posting.categories?.location ?? '',
     ...(posting.categories?.allLocations ?? []),

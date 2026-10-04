@@ -1,6 +1,6 @@
 export type SourceId = string;
 
-export type TrustTier = 'ats-official' | 'aggregator' | 'rss' | 'serp';
+export type TrustTier = 'ats-official' | 'aggregator' | 'rss' | 'serp' | 'community';
 
 export interface Job {
   id: string;

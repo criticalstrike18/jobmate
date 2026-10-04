@@ -9,6 +9,12 @@ export * from './types.js';
 export { resolveBoards } from './config.js';
 export { REMOTIVE_ATTRIBUTION, fetchRemotive } from './remotive.js';
 export { fetchArbeitnow } from './arbeitnow.js';
+export { HIMALAYAS_ATTRIBUTION, fetchHimalayas } from './himalayas.js';
+export { REMOTEOK_ATTRIBUTION, fetchRemoteOk } from './remoteok.js';
+export { JOBICY_ATTRIBUTION, fetchJobicy } from './jobicy.js';
+export { HN_ATTRIBUTION, fetchHnJobs, findLatestHiringThread } from './hn.js';
+export { SERPAPI_ATTRIBUTION, fetchSerpApiJobs } from './serpapi.js';
+export { JSEARCH_ATTRIBUTION, fetchJSearchJobs } from './jsearch.js';
 export { parseSalary } from './salary.js';
 
 const BOARD_CONCURRENCY = 6;
@@ -100,6 +106,10 @@ export async function collectJobs(
   if (opts.includeFeeds !== false) {
     const { fetchRemotive, remotiveWarning } = await import('./remotive.js');
     const { fetchArbeitnow, arbeitnowWarning } = await import('./arbeitnow.js');
+    const { fetchHimalayas, himalayasWarning } = await import('./himalayas.js');
+    const { fetchRemoteOk, remoteOkWarning } = await import('./remoteok.js');
+    const { fetchJobicy, jobicyWarning } = await import('./jobicy.js');
+    const { fetchHnJobs, hnWarning } = await import('./hn.js');
 
     const feedTasks: Array<Promise<Job[]>> = [];
 
@@ -127,8 +137,63 @@ export async function collectJobs(
         }),
       );
     }
+    if (config.feeds.himalayas.enabled) {
+      feedTasks.push(
+        fetchHimalayas().catch((e) => {
+          warnings.push(himalayasWarning(e));
+          return [];
+        }),
+      );
+    }
+    if (config.feeds.remoteok.enabled) {
+      feedTasks.push(
+        fetchRemoteOk().catch((e) => {
+          warnings.push(remoteOkWarning(e));
+          return [];
+        }),
+      );
+    }
+    if (config.feeds.jobicy.enabled) {
+      feedTasks.push(
+        fetchJobicy().catch((e) => {
+          warnings.push(jobicyWarning(e));
+          return [];
+        }),
+      );
+    }
+    if (config.feeds.hn.enabled) {
+      feedTasks.push(
+        fetchHnJobs().catch((e) => {
+          warnings.push(hnWarning(e));
+          return [];
+        }),
+      );
+    }
 
     jobs.push(...(await Promise.all(feedTasks)).flat());
+  }
+
+  // Keyed, metered sources run last and only when explicitly enabled. A missing
+  // key is a warning, not an error: the free tiers are personal, and collection
+  // must work without them.
+  if (opts.includeFeeds !== false) {
+    const { fetchSerpApiJobs, serpApiWarning } = await import('./serpapi.js');
+    const { fetchJSearchJobs, jsearchWarning } = await import('./jsearch.js');
+
+    if (config.serp.serpapi.enabled) {
+      try {
+        jobs.push(...(await fetchSerpApiJobs()));
+      } catch (e) {
+        warnings.push(serpApiWarning(e));
+      }
+    }
+    if (config.serp.jsearch.enabled) {
+      try {
+        jobs.push(...(await fetchJSearchJobs()));
+      } catch (e) {
+        warnings.push(jsearchWarning(e));
+      }
+    }
   }
 
   return { jobs, warnings };

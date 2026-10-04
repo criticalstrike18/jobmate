@@ -18,6 +18,14 @@ export async function loadSourceConfig(path = process.env.JOBMATE_SOURCES ?? DEF
       arbeitnow: config.feeds?.arbeitnow ?? { enabled: true, trustTier: 'aggregator' },
       arbeitnowUk: config.feeds?.arbeitnowUk ?? { enabled: false, trustTier: 'aggregator' },
       remotive: config.feeds?.remotive ?? { enabled: true, trustTier: 'rss' },
+      himalayas: config.feeds?.himalayas ?? { enabled: true, trustTier: 'aggregator' },
+      remoteok: config.feeds?.remoteok ?? { enabled: true, trustTier: 'aggregator' },
+      jobicy: config.feeds?.jobicy ?? { enabled: true, trustTier: 'aggregator' },
+      hn: config.feeds?.hn ?? { enabled: true, trustTier: 'community' },
+    },
+    serp: {
+      serpapi: config.serp?.serpapi ?? { enabled: false },
+      jsearch: config.serp?.jsearch ?? { enabled: false },
     },
   };
 }

@@ -71,3 +71,38 @@ feeds:
   remotive:
     enabled: true
     trustTier: rss
+  # No key required. Cursor-paginated browse feed plus a filtered search
+  # endpoint for later targeted pulls. Terms require linking to the original
+  # listing and naming Himalayas as the source. See src/sources/himalayas.ts.
+  himalayas:
+    enabled: true
+    trustTier: aggregator
+  # No key required. Always the ~100 newest remote jobs, no pagination or
+  # server-side search. Terms require a followed link back to the RemoteOK
+  # listing and naming Remote OK as the source. See src/sources/remoteok.ts.
+  remoteok:
+    enabled: true
+    trustTier: aggregator
+  # No key required. Up to 200 jobs per request. Terms require clear credit
+  # with a direct link and application buttons pointing at the Jobicy URL.
+  # See src/sources/jobicy.ts.
+  jobicy:
+    enabled: true
+    trustTier: aggregator
+  # No key required. Monthly "Who is hiring" thread, detected automatically;
+  # top-level comments only. Self-reported by posters, so trustTier is
+  # community rather than employer-verified. See src/sources/hn.ts.
+  hn:
+    enabled: true
+    trustTier: community
+
+serp:
+  # Keyed and metered. Keys live in the environment (SERPAPI_KEY) and never
+  # here. An enabled source without its key is skipped with a warning.
+  # 250 req/mo on the free tier; pagination bounded to 3 pages per run.
+  serpapi:
+    enabled: false
+  # JSEARCH_API_KEY (+ optional JSEARCH_BASE_URL, defaults to RapidAPI).
+  # One credit per page of ~10 results; bounded to 2 pages per run.
+  jsearch:
+    enabled: false

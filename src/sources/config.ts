@@ -11,12 +11,29 @@ export interface FeedConfig {
   trustTier: TrustTier;
 }
 
+export interface SerpSourceConfig {
+  enabled: boolean;
+}
+
 export interface SourceConfig {
   boards: AtsBoard[];
   feeds: {
     arbeitnow: FeedConfig;
     arbeitnowUk: FeedConfig;
     remotive: FeedConfig;
+    himalayas: FeedConfig;
+    remoteok: FeedConfig;
+    jobicy: FeedConfig;
+    hn: FeedConfig;
+  };
+  /**
+   * Keyed, metered sources. Keys live in the environment (SERPAPI_KEY,
+   * JSEARCH_API_KEY, JSEARCH_BASE_URL) and never in this file. An enabled
+   * source without its key is skipped with a warning, never a failure.
+   */
+  serp: {
+    serpapi: SerpSourceConfig;
+    jsearch: SerpSourceConfig;
   };
 }
 

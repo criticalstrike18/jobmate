@@ -14,14 +14,22 @@ import { classifyFamily, classifySeniority, isTargetFamily } from '../match/stag
 const SENIORITY_BY_TAG: Record<string, Seniority> = {
   intern: 'intern',
   internship: 'intern',
+  'intern-level': 'intern',
   junior: 'junior',
+  'junior-level': 'junior',
   entry: 'junior',
+  'entry-level': 'junior',
   mid: 'mid',
+  'mid-level': 'mid',
   senior: 'senior',
+  'senior-level': 'senior',
   staff: 'staff',
+  'staff-level': 'staff',
   principal: 'principal',
+  'principal-level': 'principal',
   lead: 'lead',
   director: 'director',
+  executive: 'director',
   manager: 'lead',
 };
 

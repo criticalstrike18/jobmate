@@ -21,7 +21,7 @@ export type RoleFamily =
   | 'non-it'
   | 'unknown';
 
-export type TrustTier = 'ats-official' | 'aggregator' | 'rss' | 'serp' | 'careers-page';
+export type TrustTier = 'ats-official' | 'aggregator' | 'rss' | 'serp' | 'community' | 'careers-page';
 
 export type ClassificationMethod = 'taxonomy' | 'inferred' | 'manual' | null;
 

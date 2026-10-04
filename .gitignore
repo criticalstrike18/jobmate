@@ -5,3 +5,5 @@ data/
 .env
 .env.local
 dist/
+.playwright-mcp/
+temp_repos/

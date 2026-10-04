@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* Delphi Luminous Radial Glow Horizon */
+  .delphi-ambient-glow {
+    background: radial-gradient(ellipse 65% 55% at 50% 100%, rgba(56, 189, 248, 0.24), rgba(14, 165, 233, 0.10) 50%, transparent 75%);
+  }
+
+  /* Choreographed Entrance Animations */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-entrance {
+    animation: fadeInUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Ambient Atmosphere Slow Breath */
+  @keyframes ambientBreathe {
+    0%, 100% {
+      opacity: 0.85;
+      transform: scaleY(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scaleY(1.08);
+    }
+  }
+
+  .animate-breathe {
+    animation: ambientBreathe 7s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+
+  /* Revolving Orbital Rings */
+  @keyframes spinClockwise {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes spinCounterClockwise {
+    from {
+      transform: rotate(360deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes dashStream {
+    to {
+      stroke-dashoffset: -600;
+    }
+  }
+
+  .animate-spin-orbit-slow {
+    animation: spinClockwise 45s linear infinite;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  .animate-spin-orbit-reverse {
+    animation: spinCounterClockwise 35s linear infinite;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  .animate-spin-orbit-fast {
+    animation: spinClockwise 25s linear infinite;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  .animate-dash-stream {
+    animation: dashStream 18s linear infinite;
+    will-change: stroke-dashoffset;
+  }
+
+  /* Pill Button Hover Shadow Bloom */
+  .pill-bloom {
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pill-bloom:hover {
+    box-shadow: 0 8px 24px -4px rgba(2, 132, 199, 0.14), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-entrance,
+  .animate-breathe,
+  .animate-spin-orbit-slow,
+  .animate-spin-orbit-reverse,
+  .animate-spin-orbit-fast,
+  .animate-dash-stream,
+  .pill-bloom,
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+html, body, #root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
