@@ -12,13 +12,11 @@ interface ResumeUploadScreenProps {
 export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, onSuccess }) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [pasteLink, setPasteLink] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const geminiApiKey = getStoredKey('gemini');
 
   const handleDrag = (e: React.DragEvent) => {
@@ -49,7 +47,6 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
   };
 
   const validateAndSetFile = (file: File) => {
-    // 15MB limit
     if (file.size > 15 * 1024 * 1024) {
       setErrorMessage('File size exceeds 15MB. Please choose a smaller document.');
       return;
@@ -68,8 +65,8 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
   };
 
   const handleAnalyze = async () => {
-    if (!selectedFile && !pasteLink) {
-      setErrorMessage('Please select a resume file or provide a link to proceed.');
+    if (!selectedFile) {
+      setErrorMessage('Please select a resume file to proceed.');
       return;
     }
 
@@ -77,12 +74,6 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
     setErrorMessage(null);
 
     try {
-      const fileToProcess = selectedFile || new File(
-        [new Blob(['Simulated Resume Content'])], 
-        pasteLink.split('/').pop() || 'linked-resume.pdf', 
-        { type: 'application/pdf' }
-      );
-
       setAnalysisStep('Reading document layers & typography...');
       await new Promise(r => setTimeout(r, 600));
 
@@ -90,7 +81,7 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
       await new Promise(r => setTimeout(r, 700));
 
       setAnalysisStep('Extracting verified codebase skills & tech stack...');
-      const parsedData = await analyzeResumeWithGemini(fileToProcess, geminiApiKey);
+      const parsedData = await analyzeResumeWithGemini(selectedFile, geminiApiKey);
 
       setAnalysisStep('Calibration complete!');
       await new Promise(r => setTimeout(r, 400));
@@ -125,52 +116,20 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
 
       {/* Main Centered Content */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pt-16 sm:pt-20 pb-12 w-full">
-        <div className="w-full max-w-[480px] sm:max-w-[500px] mx-auto flex flex-col items-center">
+        <div className="w-full max-w-[440px] sm:max-w-[460px] mx-auto flex flex-col items-center">
           
           {/* Header Typography matching Delphi */}
           <h1 className="animate-entrance text-2xl sm:text-[27px] font-bold text-slate-900 tracking-tight text-center">
             Upload your resume
           </h1>
-          <p className="animate-entrance mt-2 text-sm sm:text-[14px] text-slate-500 text-center max-w-[420px] leading-relaxed">
+          <p className="animate-entrance mt-2 text-sm sm:text-[14px] text-slate-500 text-center max-w-[400px] leading-relaxed">
             JobMate runs Gemini Vision client-side to extract verified skills, architecture history, and project proof.
           </p>
 
-          {/* Dropbox Dash Style Search / Link Input */}
+          {/* Dropbox Dash Exact Upload Box (Zero Search Bar) */}
           <div 
-            className="animate-entrance w-full mt-6 flex items-center relative rounded-full border border-slate-200/90 bg-white shadow-xs focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100 transition-all"
-            style={{ animationDelay: '80ms' }}
-          >
-            <div className="pl-3.5 pr-2 text-slate-400 flex items-center">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              value={pasteLink}
-              onChange={(e) => {
-                setPasteLink(e.target.value);
-                if (e.target.value) setErrorMessage(null);
-              }}
-              placeholder="Search or paste a resume link (Drive, Dropbox, PDF)..."
-              disabled={isAnalyzing || selectedFile !== null}
-              className="w-full py-2.5 pr-4 text-xs sm:text-[13px] text-slate-800 placeholder-slate-400 bg-transparent border-none outline-none focus:ring-0"
-            />
-            {pasteLink && !selectedFile && (
-              <button 
-                type="button"
-                onClick={() => setPasteLink('')}
-                className="pr-3 text-slate-300 hover:text-slate-500 text-xs font-bold"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Dropbox Dash Style File Upload Box with Animated Micro-Interaction */}
-          <div 
-            className="animate-entrance w-full mt-4"
-            style={{ animationDelay: '140ms' }}
+            className="animate-entrance w-full mt-6 sm:mt-7"
+            style={{ animationDelay: '100ms' }}
           >
             <input 
               ref={fileInputRef}
@@ -181,103 +140,205 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
             />
 
             {!selectedFile ? (
-              // Empty Upload Box with Animated Isometric Floating Sheets
+              // Empty Upload Box with Exact Isometric Stack Icon & Clean Micro-Interaction
               <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`w-full rounded-2xl sm:rounded-3xl border-2 border-dashed p-6 sm:p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 relative group overflow-hidden ${
+                className={`w-full rounded-2xl sm:rounded-3xl border-2 border-dashed py-10 sm:py-12 px-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 relative group overflow-hidden bg-white/90 ${
                   dragActive 
-                    ? 'border-[#0284c7] bg-sky-50/70 scale-[1.01] shadow-lg shadow-sky-500/10 ring-4 ring-sky-100' 
-                    : 'border-slate-200/90 bg-white/80 hover:border-[#0284c7] hover:bg-sky-50/25 shadow-xs hover:shadow-md hover:shadow-sky-500/5'
+                    ? 'border-[#0284c7] bg-sky-50/60 scale-[1.01] shadow-lg shadow-sky-500/10 ring-4 ring-sky-100' 
+                    : 'border-slate-300/80 hover:border-[#0284c7] hover:bg-slate-50/50 shadow-xs hover:shadow-md hover:shadow-sky-500/5'
                 }`}
               >
-                {/* Background soft ambient radial gradient */}
-                <div className="absolute inset-0 bg-radial from-sky-100/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                {/* Ambient soft glow when hovering */}
+                <div className="absolute inset-0 bg-radial from-sky-100/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                {/* Animated Isometric Layered Document Illustration */}
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center mb-3">
+                {/* Exact Dropbox Dash Stack Icon: 3-Tier Isometric Rounded Diamond Stack with Animated Micro-Interaction */}
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center mb-4 select-none">
                   
-                  {/* Ambient drop shadow */}
-                  <div className="absolute bottom-1 w-16 h-3 bg-slate-900/10 rounded-full blur-xs transition-all duration-300 group-hover:w-20 group-hover:opacity-80" />
-
-                  {/* Layer 1 (Bottom angled isometric sheet) */}
+                  {/* Soft ambient drop shadow underneath the stack */}
                   <div 
-                    className="absolute w-14 h-18 sm:w-16 sm:h-20 rounded-lg bg-indigo-100/80 border border-indigo-200/70 shadow-xs transition-transform duration-500 ease-out"
-                    style={{
-                      transform: dragActive 
-                        ? 'translateY(12px) rotate(-16deg) scale(0.92)' 
-                        : 'translateY(6px) rotate(-10deg) scale(0.94)',
-                    }}
+                    className={`absolute bottom-1 w-14 h-3 bg-slate-900/10 rounded-full blur-xs transition-all duration-300 ${
+                      dragActive ? 'w-18 opacity-70 bg-sky-900/20' : 'group-hover:w-16 group-hover:opacity-60'
+                    }`} 
                   />
 
-                  {/* Layer 2 (Middle angled isometric sheet) */}
-                  <div 
-                    className="absolute w-14 h-18 sm:w-16 sm:h-20 rounded-lg bg-sky-100 border border-sky-200 shadow-xs transition-transform duration-500 ease-out"
-                    style={{
-                      transform: dragActive 
-                        ? 'translateY(4px) rotate(14deg) scale(0.96)' 
-                        : 'translateY(2px) rotate(8deg) scale(0.98)',
-                    }}
-                  />
-
-                  {/* Layer 3 (Top interactive floating sheet with animated scan beam) */}
-                  <div 
-                    className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-lg bg-white border border-slate-200/90 shadow-md flex flex-col justify-between p-2 transition-all duration-300 overflow-hidden ${
-                      dragActive ? 'scale-105 border-sky-500 shadow-sky-500/20' : 'group-hover:translate-y-[-4px] group-hover:shadow-lg'
-                    }`}
+                  {/* SVG Isometric Stack Graphic */}
+                  <svg 
+                    viewBox="0 0 100 100" 
+                    className="w-18 h-18 sm:w-20 sm:h-20 overflow-visible"
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    {/* Simulated document lines */}
-                    <div className="space-y-1.5 pt-0.5">
-                      <div className="w-6 h-1.5 rounded-full bg-slate-300 group-hover:bg-sky-400 transition-colors" />
-                      <div className="w-10 h-1 rounded-full bg-slate-200" />
-                      <div className="w-8 h-1 rounded-full bg-slate-200" />
-                      <div className="w-9 h-1 rounded-full bg-slate-200" />
-                    </div>
+                    {/* Layer 1: Bottom Solid Dark Plate */}
+                    <g 
+                      className="transition-transform duration-300 ease-out"
+                      style={{
+                        transform: dragActive 
+                          ? 'translate(50px, 73px) scale(1, 0.58) rotate(45deg)' 
+                          : 'translate(50px, 71px) scale(1, 0.58) rotate(45deg)',
+                      }}
+                    >
+                      <rect 
+                        x="-20" 
+                        y="-20" 
+                        width="40" 
+                        height="40" 
+                        rx="7" 
+                        ry="7" 
+                        fill="#ffffff" 
+                        stroke="#111827" 
+                        strokeWidth="4.2" 
+                        strokeLinejoin="round" 
+                      />
+                    </g>
 
-                    {/* Bottom right corner upload indicator */}
-                    <div className="self-end flex items-center justify-center w-5 h-5 rounded-full bg-sky-50 text-sky-600 border border-sky-100 group-hover:bg-[#0284c7] group-hover:text-white transition-colors duration-200">
-                      <svg className="w-3 h-3 stroke-[2.4] transition-transform duration-200 group-hover:translate-y-[-1px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
-                      </svg>
-                    </div>
+                    {/* Layer 2: Middle Solid Dark Plate */}
+                    <g 
+                      className="transition-transform duration-300 ease-out"
+                      style={{
+                        transform: dragActive 
+                          ? 'translate(50px, 57px) scale(1, 0.58) rotate(45deg)' 
+                          : 'translate(50px, 55px) scale(1, 0.58) rotate(45deg)',
+                      }}
+                    >
+                      <rect 
+                        x="-20" 
+                        y="-20" 
+                        width="40" 
+                        height="40" 
+                        rx="7" 
+                        ry="7" 
+                        fill="#ffffff" 
+                        stroke="#111827" 
+                        strokeWidth="4.2" 
+                        strokeLinejoin="round" 
+                      />
+                    </g>
 
-                    {/* Animated Scanning Beam Micro-Interaction */}
-                    <div className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-sky-400 to-transparent opacity-0 group-hover:opacity-100 animate-scan transition-opacity" />
-                  </div>
+                    {/* Layer 3: Top Floating Dashed Plate with Question Mark / Upload Indicator */}
+                    <g 
+                      className={`transition-all duration-500 ease-out ${
+                        dragActive ? 'animate-none' : 'animate-float-subtle'
+                      }`}
+                      style={{
+                        transform: dragActive 
+                          ? 'translateY(-14px)' 
+                          : undefined,
+                      }}
+                    >
+                      {/* Dashed Plate */}
+                      <g 
+                        className="transition-all duration-300"
+                        style={{
+                          transform: 'translate(50px, 36px) scale(1, 0.58) rotate(45deg)',
+                        }}
+                      >
+                        <rect 
+                          x="-20" 
+                          y="-20" 
+                          width="40" 
+                          height="40" 
+                          rx="7" 
+                          ry="7" 
+                          fill="rgba(255, 255, 255, 0.98)" 
+                          stroke={dragActive ? '#0284c7' : '#94a3b8'} 
+                          strokeWidth="3.2" 
+                          strokeDasharray="5 3.5" 
+                          strokeLinejoin="round" 
+                          className="group-hover:stroke-[#0284c7] transition-colors duration-200"
+                        />
+                      </g>
+
+                      {/* Center Symbol: Isometric Question Mark or Upload Arrow on Hover */}
+                      <g className="transition-all duration-200">
+                        {dragActive ? (
+                          // Active Drag Arrow Indicator
+                          <g transform="translate(50, 36)">
+                            <path 
+                              d="M0 6 L0 -6 M-4 -2 L0 -6 L4 -2" 
+                              stroke="#0284c7" 
+                              strokeWidth="2.6" 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              className="animate-bounce"
+                            />
+                          </g>
+                        ) : (
+                          // Default Grey Question Mark matching exact Dropbox Dash reference
+                          <text 
+                            x="50" 
+                            y="41" 
+                            textAnchor="middle" 
+                            fontSize="17" 
+                            fontWeight="700" 
+                            fontFamily="system-ui, -apple-system, sans-serif" 
+                            fill="#94a3b8"
+                            className="group-hover:fill-[#0284c7] transition-colors duration-200 select-none"
+                          >
+                            ?
+                          </text>
+                        )}
+                      </g>
+
+                      {/* Animated Gentle Scan Beam on Hover */}
+                      <g transform="translate(50, 36) scale(1, 0.58) rotate(45deg)">
+                        <rect 
+                          x="-18" 
+                          y="-18" 
+                          width="36" 
+                          height="36" 
+                          rx="5" 
+                          fill="none" 
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        />
+                      </g>
+                    </g>
+                  </svg>
                 </div>
 
-                {/* Upload Call to Action */}
-                <span className="text-[14px] sm:text-[15px] font-semibold text-slate-800 group-hover:text-[#0284c7] transition-colors">
+                {/* Upload Typography matching Dropbox Dash */}
+                <span className="text-[14px] sm:text-[15px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">
                   Upload or drag files here
                 </span>
                 <p className="mt-1 text-xs text-slate-400 font-normal">
                   PDF, DOCX, or high-res images up to 15MB
                 </p>
 
-                {/* Browse Pill Button */}
+                {/* Subtle Browse Button */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     fileInputRef.current?.click();
                   }}
-                  className="mt-3.5 px-3.5 py-1 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                  className="mt-3.5 px-4 py-1.5 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                 >
                   Browse local files
                 </button>
               </div>
             ) : (
-              // Selected File Preview Card
+              // Selected File Preview Card with Snapped Solid Stack
               <div className="w-full rounded-2xl sm:rounded-3xl border border-sky-200/90 bg-sky-50/40 p-5 sm:p-6 flex flex-col gap-3 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {/* Document Badge */}
-                    <div className="w-11 h-11 rounded-xl bg-white border border-sky-200 flex items-center justify-center flex-shrink-0 text-sky-600 shadow-xs">
-                      <svg className="w-6 h-6 stroke-[1.8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    
+                    {/* Mini Stack Icon Solidified */}
+                    <div className="w-12 h-12 rounded-xl bg-white border border-sky-200 flex items-center justify-center flex-shrink-0 text-sky-600 shadow-xs">
+                      <svg viewBox="0 0 100 100" className="w-8 h-8" fill="none">
+                        <g transform="translate(50, 68) scale(1, 0.58) rotate(45deg)">
+                          <rect x="-18" y="-18" width="36" height="36" rx="6" fill="#ffffff" stroke="#111827" strokeWidth="4.5" />
+                        </g>
+                        <g transform="translate(50, 52) scale(1, 0.58) rotate(45deg)">
+                          <rect x="-18" y="-18" width="36" height="36" rx="6" fill="#ffffff" stroke="#111827" strokeWidth="4.5" />
+                        </g>
+                        <g transform="translate(50, 36) scale(1, 0.58) rotate(45deg)">
+                          <rect x="-18" y="-18" width="36" height="36" rx="6" fill="#0284c7" stroke="#0284c7" strokeWidth="4.5" />
+                        </g>
+                        <path d="M45 36 L48 39 L55 32" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
 
@@ -321,7 +382,7 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
           {/* Dropbox Dash Style Disclosure Banner */}
           <div 
             className="animate-entrance w-full mt-4 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-xs text-amber-900/90 flex items-start gap-2.5 text-left"
-            style={{ animationDelay: '200ms' }}
+            style={{ animationDelay: '180ms' }}
           >
             <div className="mt-0.5 text-amber-600 flex-shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -336,14 +397,14 @@ export const ResumeUploadScreen: React.FC<ResumeUploadScreenProps> = ({ onBack, 
           {/* Primary Action Button - 50px Delphi Pill Button */}
           <div 
             className="animate-entrance w-full mt-6 flex flex-col items-center gap-3"
-            style={{ animationDelay: '260ms' }}
+            style={{ animationDelay: '240ms' }}
           >
             <button
               type="button"
               onClick={handleAnalyze}
-              disabled={isAnalyzing || (!selectedFile && !pasteLink)}
+              disabled={isAnalyzing || !selectedFile}
               className={`pill-bloom ${THEME.buttons.base} w-full ${
-                (selectedFile || pasteLink) && !isAnalyzing
+                selectedFile && !isAnalyzing
                   ? 'bg-[#0284c7] hover:bg-[#0369a1] text-white shadow-lg shadow-sky-500/25 cursor-pointer'
                   : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
               }`}

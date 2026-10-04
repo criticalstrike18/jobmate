@@ -7,12 +7,17 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "video:studio": "remotion studio",
+    "video:render": "remotion render src/remotion/index.tsx JobMateExplainer out/jobmate-explainer.mp4 --overwrite"
   },
   "dependencies": {
+    "@remotion/cli": "4.0.407",
+    "@remotion/player": "4.0.407",
     "firebase": "^12.19.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "remotion": "4.0.407"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
