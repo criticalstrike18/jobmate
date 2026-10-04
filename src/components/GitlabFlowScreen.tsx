@@ -23,14 +23,18 @@ export const GitlabFlowScreen: React.FC<GitlabFlowScreenProps> = ({ onBack, onSu
         onSuccess(user);
         return;
       } catch (err: unknown) {
+        if ((err as any)?.code === 'auth/popup-closed-by-user' || (err as any)?.code === 'auth/cancelled-popup-request') {
+          return;
+        }
         const message = err instanceof Error ? err.message : 'GitLab authorization failed';
         if (message === 'FIREBASE_NOT_CONFIGURED') {
           // Fall through to simulated authorization
         } else {
           setAuthError(message);
-          setIsLoading(false);
           return;
         }
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -45,6 +49,16 @@ export const GitlabFlowScreen: React.FC<GitlabFlowScreenProps> = ({ onBack, onSu
         providerId: 'gitlab.com',
       });
     }, 900);
+  };
+
+  const handleDemoSignIn = () => {
+    onSuccess({
+      uid: 'gitlab-sim-engineer',
+      displayName: 'GitLabEngineer',
+      email: 'engineer@gitlab.com',
+      photoURL: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
+      providerId: 'gitlab.com',
+    });
   };
 
   return (
@@ -172,12 +186,23 @@ export const GitlabFlowScreen: React.FC<GitlabFlowScreenProps> = ({ onBack, onSu
       </div>
 
       {/* Security Redirect Notice */}
-      <p 
-        className={`animate-entrance mt-4 ${THEME.typography.caption}`}
+      <div 
+        className="animate-entrance mt-4 flex flex-col items-center gap-2 w-full"
         style={{ animationDelay: '360ms' }}
       >
-        Authorizing will redirect back to jobmate.io
-      </p>
+        <p className={THEME.typography.caption}>
+          Authorizing will redirect back to jobmate.io
+        </p>
+
+        {/* Discreet Simulation Bypass */}
+        <button
+          type="button"
+          onClick={handleDemoSignIn}
+          className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors mt-0.5 cursor-pointer"
+        >
+          Or continue with demo preview
+        </button>
+      </div>
 
     </div>
   );
