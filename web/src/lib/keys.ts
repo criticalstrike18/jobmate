@@ -53,7 +53,8 @@ export function isKeyConnected(engine: EngineType): boolean {
 
 /**
  * Live test probe for Google Gemini API key
- * Routes test probe to gemini-3.5-flash-lite (with automatic fallback to available flash tiers)
+ * Dynamically queries active models from Google AI Studio / Gemini API
+ * Priorities: gemini-3.5-flash-lite, gemini-3.8-flash, gemini-3.1-pro, gemini-2.5-flash
  */
 export async function verifyGeminiApiKey(apiKey: string): Promise<KeyVerificationResult> {
   const cleanKey = apiKey.trim();
@@ -67,73 +68,88 @@ export async function verifyGeminiApiKey(apiKey: string): Promise<KeyVerificatio
     return { success: true, latencyMs: 142, model: 'gemini-3.5-flash-lite (simulated)' };
   }
 
-  const candidateModels = [
-    'gemini-3.5-flash-lite',
-    'gemini-2.5-flash-lite',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash'
-  ];
-
   const startTime = performance.now();
-  let lastErrorMessage = 'Failed to verify key with Gemini API.';
 
-  for (const model of candidateModels) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: 'ping' }]
-            }
-          ]
-        })
-      });
+  try {
+    // Step 1: Query the live ListModels endpoint to validate the key and discover active models
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`;
+    const listRes = await fetch(listUrl, { method: 'GET' });
 
-      const latencyMs = Math.round(performance.now() - startTime);
-
-      if (response.ok) {
-        setStoredKey('gemini', cleanKey);
-        return {
-          success: true,
-          latencyMs,
-          model
-        };
-      }
-
-      const errJson = await response.json().catch(() => null);
+    if (!listRes.ok) {
+      const errJson = await listRes.json().catch(() => null);
       const apiMsg = errJson?.error?.message;
-
-      // If key is invalid (API_KEY_INVALID), immediately stop and report
-      if (response.status === 400 && apiMsg && (apiMsg.includes('API key not valid') || apiMsg.includes('API_KEY_INVALID'))) {
+      if (apiMsg && (apiMsg.includes('API key not valid') || apiMsg.includes('API_KEY_INVALID'))) {
         return {
           success: false,
-          error: 'Invalid API key. Please check your key in Google AI Studio.'
+          error: 'Invalid API key. Please check your key from Google AI Studio (aistudio.google.com).'
         };
       }
-
-      if (apiMsg) {
-        lastErrorMessage = apiMsg;
-      }
-    } catch (err: any) {
-      lastErrorMessage = err.message || 'Network error connecting to Google Gemini endpoint.';
+      return {
+        success: false,
+        error: apiMsg || `HTTP ${listRes.status}: Failed to authenticate with Google Gemini API.`
+      };
     }
-  }
 
-  return {
-    success: false,
-    error: lastErrorMessage
-  };
+    const listData = await listRes.json().catch(() => null);
+    const availableModels: string[] = Array.isArray(listData?.models)
+      ? listData.models
+          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+          .map((m: any) => m.name.replace('models/', ''))
+      : [];
+
+    // Step 2: Select the best active 2026/latest production model
+    const priorityPreference = [
+      'gemini-3.5-flash-lite',
+      'gemini-3.8-flash',
+      'gemini-3.1-pro',
+      'gemini-2.5-flash',
+      'gemini-2.5-pro'
+    ];
+
+    let targetModel = priorityPreference.find((pref) => availableModels.includes(pref));
+    
+    // Fallback if priority models aren't named identically
+    if (!targetModel) {
+      targetModel = availableModels.find((m) => m.includes('flash') || m.includes('gemini-3')) || availableModels[0] || 'gemini-3.5-flash-lite';
+    }
+
+    // Step 3: Perform live 1-token route verification ping
+    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+    const testRes = await fetch(testUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: 'ping' }] }]
+      })
+    });
+
+    const latencyMs = Math.round(performance.now() - startTime);
+
+    if (testRes.ok) {
+      setStoredKey('gemini', cleanKey);
+      return {
+        success: true,
+        latencyMs,
+        model: targetModel
+      };
+    }
+
+    const errJson = await testRes.json().catch(() => null);
+    return {
+      success: false,
+      error: errJson?.error?.message || `HTTP ${testRes.status}: Route ping failed on ${targetModel}.`
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Network error connecting to Google Gemini endpoint.'
+    };
+  }
 }
 
 /**
  * Live test probe for Groq Cloud API key
- * Checks /models or routes probe to llama-3.1-8b-instant
+ * Dynamically queries https://api.groq.com/openai/v1/models
  */
 export async function verifyGroqApiKey(apiKey: string): Promise<KeyVerificationResult> {
   const cleanKey = apiKey.trim();
@@ -143,7 +159,7 @@ export async function verifyGroqApiKey(apiKey: string): Promise<KeyVerificationR
 
   if (cleanKey === 'test_demo_groq_key_12345') {
     setStoredKey('groq', cleanKey);
-    return { success: true, latencyMs: 82, model: 'llama-3.1-8b-instant (simulated)' };
+    return { success: true, latencyMs: 82, model: 'llama-3.3-70b-versatile (simulated)' };
   }
 
   const startTime = performance.now();
@@ -159,11 +175,15 @@ export async function verifyGroqApiKey(apiKey: string): Promise<KeyVerificationR
     const latencyMs = Math.round(performance.now() - startTime);
 
     if (response.ok) {
+      const data = await response.json().catch(() => null);
+      const modelsList: string[] = Array.isArray(data?.data) ? data.data.map((m: any) => m.id) : [];
+      const bestModel = modelsList.find((m) => m.includes('llama-3.3') || m.includes('llama-3.2')) || modelsList[0] || 'llama-3.3-70b-versatile';
+      
       setStoredKey('groq', cleanKey);
       return {
         success: true,
         latencyMs,
-        model: 'llama-3.3-70b-versatile / llama-3.1-8b-instant'
+        model: bestModel
       };
     }
 
@@ -191,7 +211,7 @@ export async function verifyAnthropicApiKey(apiKey: string): Promise<KeyVerifica
 
   if (cleanKey === 'test_demo_anthropic_key_12345') {
     setStoredKey('anthropic', cleanKey);
-    return { success: true, latencyMs: 195, model: 'claude-3-5-haiku (simulated)' };
+    return { success: true, latencyMs: 195, model: 'claude-3-5-haiku-20241022 (simulated)' };
   }
 
   const startTime = performance.now();
