@@ -14,7 +14,11 @@ import { GithubFlowScreen } from './GithubFlowScreen';
 import { GitlabFlowScreen } from './GitlabFlowScreen';
 import { AuthenticatedScreen } from './AuthenticatedScreen';
 
-export const LoginScreen: React.FC = () => {
+interface LoginScreenProps {
+  onNavigateHome?: () => void;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
   const [currentView, setCurrentView] = useState<AuthFlowView>('main');
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
@@ -58,7 +62,7 @@ export const LoginScreen: React.FC = () => {
     <div className={`${THEME.canvasBg} ${THEME.canvasText} ${THEME.layout.pageContainer}`}>
       
       {/* Standardized Header across all views */}
-      <Header onLogoClick={() => setCurrentView('main')} />
+      <Header onLogoClick={() => currentView === 'main' ? onNavigateHome?.() : setCurrentView('main')} />
 
       {/* Main Center Area - Seamless, Zero Box-Inside-Box across all flows */}
       <main className={THEME.layout.mainContainer}>
@@ -191,10 +195,21 @@ export const LoginScreen: React.FC = () => {
                   Privacy Policy
                 </a>.
               </p>
+
+              {/* Back to Homepage */}
+              {onNavigateHome && (
+                <button
+                  type="button"
+                  onClick={onNavigateHome}
+                  className={`mt-4 ${THEME.typography.returnLink}`}
+                >
+                  <span>← Back to Homepage</span>
+                </button>
+              )}
             </div>
 
             {/* Discreet Firebase Status Toggle */}
-            <div className="animate-entrance mt-6" style={{ animationDelay: '500ms' }}>
+            <div className="animate-entrance mt-5" style={{ animationDelay: '500ms' }}>
               <button
                 type="button"
                 onClick={() => setShowFirebaseModal(true)}
