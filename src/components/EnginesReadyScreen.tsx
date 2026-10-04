@@ -50,13 +50,13 @@ export const EnginesReadyScreen: React.FC<EnginesReadyScreenProps> = ({
           </h1>
 
           <p className="animate-entrance text-[14px] sm:text-[15px] text-slate-500 mt-2 mb-6 leading-relaxed max-w-[360px]">
-            Google Gemini 2.0 Flash is verified and calibrated for multimodal resume parsing and proof substantiation.
+            Google Gemini 3.5 Flash is verified and calibrated for multimodal resume parsing and proof substantiation.
           </p>
 
           <div className="animate-entrance w-full p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs text-left mb-6 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-500 font-medium">Model Route:</span>
-              <span className="font-mono text-emerald-600 font-semibold">gemini-2.0-flash-lite</span>
+              <span className="font-mono text-emerald-600 font-semibold">gemini-3.5-flash-lite</span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-500 font-medium">Latency Status:</span>

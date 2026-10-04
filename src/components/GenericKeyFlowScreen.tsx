@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { THEME } from '../constants/theme';
 import { RevolvingAtmosphere } from './RevolvingAtmosphere';
-import { getStoredKey, setStoredKey, type EngineType } from '../lib/keys';
+import { 
+  getStoredKey, 
+  setStoredKey, 
+  verifyGroqApiKey, 
+  verifyAnthropicApiKey, 
+  verifyOpenAIApiKey, 
+  verifyGitLabToken, 
+  type EngineType 
+} from '../lib/keys';
 
 interface GenericKeyFlowScreenProps {
   engine: 'groq' | 'anthropic' | 'openai' | 'gitlab';
@@ -15,6 +23,7 @@ const ENGINE_CONFIG: Record<
     name: string;
     label: string;
     model: string;
+    subtitle: string;
     placeholder: string;
     getKeyUrl: string;
     getKeyText: string;
@@ -23,7 +32,8 @@ const ENGINE_CONFIG: Record<
   groq: {
     name: 'Groq Cloud',
     label: 'Groq API Key',
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama-3.3-70b-versatile / llama-3.1-8b-instant',
+    subtitle: 'Enter your Groq API key to route requests to Llama 3.3 (70B) and Llama 3.1 (8B Instant) with sub-100ms latency.',
     placeholder: 'gsk_••••••••••••••••••••••••••••••••••••',
     getKeyUrl: 'https://console.groq.com/keys',
     getKeyText: 'Get free key on Groq Console',
@@ -31,7 +41,8 @@ const ENGINE_CONFIG: Record<
   anthropic: {
     name: 'Anthropic Claude',
     label: 'Anthropic API Key',
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-3-5-haiku-20241022 / claude-3-5-sonnet',
+    subtitle: 'Enter your Anthropic API key to enable Claude 3.5 Sonnet and Haiku reasoning models.',
     placeholder: 'sk-ant-••••••••••••••••••••••••••••••••',
     getKeyUrl: 'https://console.anthropic.com/settings/keys',
     getKeyText: 'Get key on Anthropic Console',
@@ -40,6 +51,7 @@ const ENGINE_CONFIG: Record<
     name: 'OpenAI / DeepSeek / Custom',
     label: 'API Key (OpenAI / DeepSeek / OpenRouter)',
     model: 'gpt-4o-mini / deepseek-chat',
+    subtitle: 'Enter your API key for OpenAI, DeepSeek, OpenRouter, or custom OpenAI-compatible endpoint.',
     placeholder: 'sk-••••••••••••••••••••••••••••••••••••',
     getKeyUrl: 'https://platform.openai.com/api-keys',
     getKeyText: 'Get key on OpenAI Platform',
@@ -48,6 +60,7 @@ const ENGINE_CONFIG: Record<
     name: 'GitLab',
     label: 'GitLab Personal Access Token',
     model: 'GitLab REST API v4',
+    subtitle: 'Enter your GitLab Personal Access Token with read_api and read_repository scopes.',
     placeholder: 'glpat-••••••••••••••••••••',
     getKeyUrl: 'https://gitlab.com/-/user_settings/personal_access_tokens',
     getKeyText: 'Create token on GitLab',
@@ -63,22 +76,48 @@ export const GenericKeyFlowScreen: React.FC<GenericKeyFlowScreenProps> = ({
   const existingKey = getStoredKey(engine as EngineType) || '';
   const [apiKey, setApiKey] = useState<string>(existingKey);
   const [showKey, setShowKey] = useState<boolean>(false);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{ latencyMs: number; model: string } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim()) {
-      setErrorMsg(`Please enter your ${config.name} key`);
+      setErrorMsg(`Please enter your ${config.name} credentials`);
       return;
     }
 
-    setIsSaving(true);
-    setTimeout(() => {
+    setErrorMsg(null);
+    setIsVerifying(true);
+    setSuccessInfo(null);
+
+    let result: { success: boolean; latencyMs?: number; error?: string; model?: string } = {
+      success: true,
+      latencyMs: 120,
+      model: config.model,
+    };
+
+    if (engine === 'groq') {
+      result = await verifyGroqApiKey(apiKey);
+    } else if (engine === 'anthropic') {
+      result = await verifyAnthropicApiKey(apiKey);
+    } else if (engine === 'openai') {
+      result = await verifyOpenAIApiKey(apiKey);
+    } else if (engine === 'gitlab') {
+      result = await verifyGitLabToken(apiKey);
+    }
+
+    setIsVerifying(false);
+
+    if (result.success) {
       setStoredKey(engine as EngineType, apiKey.trim());
-      setIsSaving(false);
-      onSuccess();
-    }, 400);
+      setSuccessInfo({ latencyMs: result.latencyMs || 100, model: result.model || config.model });
+      setTimeout(() => {
+        onSuccess();
+      }, 750);
+    } else {
+      setErrorMsg(result.error || `Failed to verify key with ${config.name}.`);
+    }
   };
 
   return (
@@ -109,7 +148,7 @@ export const GenericKeyFlowScreen: React.FC<GenericKeyFlowScreenProps> = ({
             Connect {config.name}
           </h1>
           <p className="animate-entrance text-[14px] sm:text-[15px] text-slate-500 text-center mt-2 mb-8 leading-relaxed">
-            Configure your API credentials to unlock additional model routing and fallback capabilities.
+            {config.subtitle}
           </p>
 
           <form 
@@ -174,15 +213,38 @@ export const GenericKeyFlowScreen: React.FC<GenericKeyFlowScreenProps> = ({
               </div>
             )}
 
+            {successInfo && (
+              <div className="mt-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs leading-relaxed flex items-center gap-2 animate-entrance">
+                <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+                <span>Verified and routed in {successInfo.latencyMs}ms! Saving...</span>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isSaving || !apiKey.trim()}
+              disabled={isVerifying || !apiKey.trim()}
               className="mt-4 w-full h-[50px] rounded-full bg-[#0284c7] hover:bg-[#0369a1] text-white font-medium flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none"
             >
-              {isSaving ? 'Connecting...' : 'Connect Key'}
+              {isVerifying ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Verifying route to {config.model.split(' ')[0]}...</span>
+                </>
+              ) : successInfo ? (
+                <span>✓ Verified</span>
+              ) : (
+                <span>Verify & Connect Key</span>
+              )}
             </button>
 
-            <p className="text-[11px] text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
+            <p className="text-[12px] text-slate-400 text-center mt-3">
+              Route target: <span className="font-mono text-slate-600">{config.model}</span>
+            </p>
+
+            <p className="text-[11px] text-slate-400 text-center mt-1.5 flex items-center justify-center gap-1">
               <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
