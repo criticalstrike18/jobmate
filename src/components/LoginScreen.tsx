@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { THEME } from '../constants/theme';
 import type { AuthFlowView, AuthUser } from '../types/auth';
 import { 
@@ -6,6 +6,7 @@ import {
   subscribeToAuthChanges, 
   logoutUser 
 } from '../lib/firebase';
+import { isKeyConnected } from '../lib/keys';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { RevolvingAtmosphere } from './RevolvingAtmosphere';
@@ -23,28 +24,82 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
+  const isFreshLoginRef = useRef(false);
+
   const [currentView, setCurrentView] = useState<AuthFlowView>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const view = params.get('view');
       if (view === 'engines' || view === 'connect-engines') return 'connect-engines';
       if (view === 'gemini-key' || view === 'gemini') return 'gemini-key-flow';
+      if (view === 'ready' || view === 'engines-ready') return 'engines-ready';
+
+      const savedView = localStorage.getItem('jobmate_active_view') as AuthFlowView | null;
+      if (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'engines-ready'].includes(savedView)) {
+        return savedView;
+      }
     }
     return 'main';
   });
+
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [showFirebaseModal, setShowFirebaseModal] = useState<boolean>(false);
-  const [activeGenericEngine, setActiveGenericEngine] = useState<'groq' | 'anthropic' | 'openai' | 'gitlab'>('groq');
+  const [activeGenericEngine, setActiveGenericEngine] = useState<'groq' | 'anthropic' | 'openai' | 'gitlab'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('jobmate_generic_engine');
+      if (saved === 'groq' || saved === 'anthropic' || saved === 'openai' || saved === 'gitlab') {
+        return saved;
+      }
+    }
+    return 'groq';
+  });
 
   const configStatus = getFirebaseConfigStatus();
+
+  const navigateToView = (view: AuthFlowView) => {
+    setCurrentView(view);
+    if (typeof window !== 'undefined') {
+      if (['connect-engines', 'gemini-key-flow', 'generic-key-flow', 'engines-ready', 'authenticated'].includes(view)) {
+        localStorage.setItem('jobmate_active_view', view);
+      } else {
+        localStorage.removeItem('jobmate_active_view');
+      }
+    }
+  };
 
   // Listen to live Firebase Auth state changes
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((user) => {
       if (user) {
         setCurrentUser(user);
-        setCurrentView('authenticated');
+
+        // If this auth state change was triggered by fresh interactive login in this session,
+        // do not override the direct transition to connect-engines
+        if (isFreshLoginRef.current) {
+          return;
+        }
+
+        // Returning from a previous session:
+        // "only show the previous screen if left in the middle"
+        const savedView = (typeof window !== 'undefined' ? localStorage.getItem('jobmate_active_view') : null) as AuthFlowView | null;
+        const geminiConnected = isKeyConnected('gemini');
+
+        const inMiddleOfFlow = 
+          (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow'].includes(savedView)) ||
+          !geminiConnected;
+
+        if (inMiddleOfFlow) {
+          // Restore the previous screen where the user left off in the middle
+          const viewToResume = (savedView && ['connect-engines', 'gemini-key-flow', 'generic-key-flow'].includes(savedView))
+            ? savedView
+            : 'connect-engines';
+          navigateToView(viewToResume);
+        } else {
+          // Session already completed onboarding (or explicitly on authenticated view)
+          const viewToShow = savedView === 'engines-ready' ? 'engines-ready' : 'authenticated';
+          navigateToView(viewToShow);
+        }
       }
     });
     return () => unsubscribe();
@@ -54,34 +109,46 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
     setLoadingProvider(provider);
     setTimeout(() => {
       setLoadingProvider(null);
-      if (provider === 'google') setCurrentView('google-flow');
-      if (provider === 'github') setCurrentView('github-flow');
-      if (provider === 'gitlab') setCurrentView('gitlab-flow');
+      if (provider === 'google') navigateToView('google-flow');
+      if (provider === 'github') navigateToView('github-flow');
+      if (provider === 'gitlab') navigateToView('gitlab-flow');
     }, 280);
   };
 
+  /**
+   * Called right after interactive login succeeds.
+   * If not returning from a previous session, show connect AI engines screen right after logging in to maintain flow.
+   */
   const handleAuthSuccess = (user: AuthUser) => {
+    isFreshLoginRef.current = true;
     setCurrentUser(user);
-    setCurrentView('authenticated');
+    navigateToView('connect-engines');
   };
 
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
-    setCurrentView('main');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('jobmate_active_view');
+      localStorage.removeItem('jobmate_generic_engine');
+    }
+    navigateToView('main');
   };
 
   // Delphi Full-Screen Onboarding Views (Distraction-free, zero header/footer clutter)
   if (currentView === 'connect-engines') {
     return (
       <ConnectEnginesScreen
-        onBack={() => currentUser ? setCurrentView('authenticated') : (onNavigateHome ? onNavigateHome() : setCurrentView('main'))}
-        onOpenGeminiKeyFlow={() => setCurrentView('gemini-key-flow')}
+        onBack={() => currentUser ? navigateToView('authenticated') : (onNavigateHome ? onNavigateHome() : navigateToView('main'))}
+        onOpenGeminiKeyFlow={() => navigateToView('gemini-key-flow')}
         onOpenGenericKeyFlow={(engine) => {
           setActiveGenericEngine(engine);
-          setCurrentView('generic-key-flow');
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('jobmate_generic_engine', engine);
+          }
+          navigateToView('generic-key-flow');
         }}
-        onContinue={() => setCurrentView('engines-ready')}
+        onContinue={() => navigateToView('engines-ready')}
         isGitHubConnected={currentUser ? currentUser.providerId.includes('github') : true}
       />
     );
@@ -90,8 +157,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
   if (currentView === 'gemini-key-flow') {
     return (
       <GeminiKeyFlowScreen
-        onBack={() => setCurrentView('connect-engines')}
-        onSuccess={() => setCurrentView('connect-engines')}
+        onBack={() => navigateToView('connect-engines')}
+        onSuccess={() => navigateToView('connect-engines')}
       />
     );
   }
@@ -100,8 +167,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
     return (
       <GenericKeyFlowScreen
         engine={activeGenericEngine}
-        onBack={() => setCurrentView('connect-engines')}
-        onSuccess={() => setCurrentView('connect-engines')}
+        onBack={() => navigateToView('connect-engines')}
+        onSuccess={() => navigateToView('connect-engines')}
       />
     );
   }
@@ -109,7 +176,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
   if (currentView === 'engines-ready') {
     return (
       <EnginesReadyScreen
-        onBackToEngines={() => setCurrentView('connect-engines')}
+        onBackToEngines={() => navigateToView('connect-engines')}
         onNavigateHome={onNavigateHome}
       />
     );
@@ -119,7 +186,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
     <div className={`${THEME.canvasBg} ${THEME.canvasText} ${THEME.layout.pageContainer}`}>
       
       {/* Standardized Header across all views */}
-      <Header onLogoClick={() => currentView === 'main' ? onNavigateHome?.() : setCurrentView('main')} />
+      <Header onLogoClick={() => currentView === 'main' ? onNavigateHome?.() : navigateToView('main')} />
 
       {/* Main Center Area - Seamless, Zero Box-Inside-Box across all flows */}
       <main className={THEME.layout.mainContainer}>
@@ -283,7 +350,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
         {/* View: Standardized Google Flow */}
         {currentView === 'google-flow' && (
           <GoogleFlowScreen 
-            onBack={() => setCurrentView('main')} 
+            onBack={() => navigateToView('main')} 
             onSuccess={handleAuthSuccess} 
           />
         )}
@@ -291,7 +358,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
         {/* View: Standardized GitHub Flow */}
         {currentView === 'github-flow' && (
           <GithubFlowScreen 
-            onBack={() => setCurrentView('main')} 
+            onBack={() => navigateToView('main')} 
             onSuccess={handleAuthSuccess} 
           />
         )}
@@ -299,7 +366,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
         {/* View: Standardized GitLab Flow */}
         {currentView === 'gitlab-flow' && (
           <GitlabFlowScreen 
-            onBack={() => setCurrentView('main')} 
+            onBack={() => navigateToView('main')} 
             onSuccess={handleAuthSuccess} 
           />
         )}
@@ -309,7 +376,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
           <AuthenticatedScreen 
             user={currentUser} 
             onLogout={handleLogout} 
-            onContinueToEngines={() => setCurrentView('connect-engines')}
+            onContinueToEngines={() => navigateToView('connect-engines')}
           />
         )}
       </main>

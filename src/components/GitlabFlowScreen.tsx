@@ -126,9 +126,9 @@ export const GitlabFlowScreen: React.FC<GitlabFlowScreenProps> = ({ onBack, onSu
         <div className="flex items-start gap-3">
           <span className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
           <div className="flex flex-col">
-            <span className={THEME.typography.scopeName}>read_user</span>
+            <span className={THEME.typography.scopeName}>openid & profile</span>
             <span className={`mt-0.5 ${THEME.typography.scopeDesc}`}>
-              Personal profile and verified primary email
+              GitLab identity, handle, and avatar photo
             </span>
           </div>
         </div>
@@ -136,9 +136,9 @@ export const GitlabFlowScreen: React.FC<GitlabFlowScreenProps> = ({ onBack, onSu
         <div className="flex items-start gap-3">
           <span className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
           <div className="flex flex-col">
-            <span className={THEME.typography.scopeName}>read_repository</span>
+            <span className={THEME.typography.scopeName}>email</span>
             <span className={`mt-0.5 ${THEME.typography.scopeDesc}`}>
-              AST repository scanning and codebase skill manifests
+              Verified primary email for ATS matching
             </span>
           </div>
         </div>
@@ -146,9 +146,9 @@ export const GitlabFlowScreen: React.FC<GitlabFlowScreenProps> = ({ onBack, onSu
         <div className="flex items-start gap-3">
           <span className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
           <div className="flex flex-col">
-            <span className={THEME.typography.scopeName}>read_api</span>
+            <span className={THEME.typography.scopeName}>Single Sign-On</span>
             <span className={`mt-0.5 ${THEME.typography.scopeDesc}`}>
-              Commit activity and programming language analytics
+              Secure client-side session authentication
             </span>
           </div>
         </div>
