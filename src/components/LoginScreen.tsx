@@ -5,6 +5,8 @@ import {
   getFirebaseConfigStatus, 
   signInWithGoogle,
   signInWithGoogleIdToken,
+  signInWithGithub,
+  signInWithGitlab,
   subscribeToAuthChanges, 
   logoutUser 
 } from '../lib/firebase';
@@ -14,9 +16,6 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { RevolvingAtmosphere } from './RevolvingAtmosphere';
 import { useGoogleOneTap } from '../hooks/useGoogleOneTap';
-import { GoogleFlowScreen } from './GoogleFlowScreen';
-import { GithubFlowScreen } from './GithubFlowScreen';
-import { GitlabFlowScreen } from './GitlabFlowScreen';
 import { AuthenticatedScreen } from './AuthenticatedScreen';
 import { ConnectEnginesScreen } from './ConnectEnginesScreen';
 import { GeminiKeyFlowScreen } from './GeminiKeyFlowScreen';
@@ -113,19 +112,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
   }, []);
 
   const handleProviderClick = (provider: 'google' | 'github' | 'gitlab') => {
+    // Single-click sign-in for every provider — no intermediate screens.
     if (provider === 'google') {
-      // Single-click Google sign-in: try the One Tap pill first
-      // (user-gesture-triggered, less likely to be suppressed), fall back
-      // to the classic popup window. No intermediate screen.
+      // Try the One Tap pill first (user-gesture-triggered, less likely to
+      // be suppressed), fall back to the classic popup window.
       void handleGoogleDirectSignIn();
       return;
     }
-    setLoadingProvider(provider);
-    setTimeout(() => {
-      setLoadingProvider(null);
-      if (provider === 'github') navigateToView('github-flow');
-      if (provider === 'gitlab') navigateToView('gitlab-flow');
-    }, 280);
+    if (provider === 'github') {
+      void handleGithubDirectSignIn();
+      return;
+    }
+    void handleGitlabDirectSignIn();
   };
 
   const handleGoogleDirectSignIn = async () => {
@@ -162,6 +160,60 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
     }
   };
 
+  const handleGithubDirectSignIn = async () => {
+    setLoadingProvider('github');
+    setMainError(null);
+    try {
+      if (!configStatus.isConfigured) {
+        // Demo fallback when Firebase isn't configured yet.
+        handleAuthSuccess({
+          uid: 'github-sim-developer',
+          displayName: 'OctoDeveloper',
+          email: 'developer@github.com',
+          photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+          providerId: 'github.com',
+        });
+        return;
+      }
+      const user = await signInWithGithub();
+      handleAuthSuccess(user);
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        return;
+      }
+      setMainError(err?.message || 'GitHub sign-in failed. Please try again.');
+    } finally {
+      setLoadingProvider(null);
+    }
+  };
+
+  const handleGitlabDirectSignIn = async () => {
+    setLoadingProvider('gitlab');
+    setMainError(null);
+    try {
+      if (!configStatus.isConfigured) {
+        // Demo fallback when Firebase isn't configured yet.
+        handleAuthSuccess({
+          uid: 'gitlab-sim-engineer',
+          displayName: 'GitLabEngineer',
+          email: 'engineer@gitlab.com',
+          photoURL: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
+          providerId: 'gitlab.com',
+        });
+        return;
+      }
+      const user = await signInWithGitlab();
+      handleAuthSuccess(user);
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        return;
+      }
+      setMainError(err?.message || 'GitLab sign-in failed. Please try again.');
+    } finally {
+      setLoadingProvider(null);
+    }
+  };
+
   /**
    * Called right after interactive login succeeds.
    * If not returning from a previous session, show connect AI engines screen right after logging in to maintain flow.
@@ -186,7 +238,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
   // Keeps the existing popup buttons as fallback — One Tap only shows for
   // Google-signed-in users and Google may suppress it (cooldown, FedCM).
   useGoogleOneTap({
-    enabled: !currentUser && (currentView === 'main' || currentView === 'google-flow'),
+    enabled: !currentUser && currentView === 'main',
     onSuccess: handleAuthSuccess,
   });
 
@@ -416,30 +468,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
             </div>
 
           </div>
-        )}
-
-        {/* View: Standardized Google Flow */}
-        {currentView === 'google-flow' && (
-          <GoogleFlowScreen 
-            onBack={() => navigateToView('main')} 
-            onSuccess={handleAuthSuccess} 
-          />
-        )}
-
-        {/* View: Standardized GitHub Flow */}
-        {currentView === 'github-flow' && (
-          <GithubFlowScreen 
-            onBack={() => navigateToView('main')} 
-            onSuccess={handleAuthSuccess} 
-          />
-        )}
-
-        {/* View: Standardized GitLab Flow */}
-        {currentView === 'gitlab-flow' && (
-          <GitlabFlowScreen 
-            onBack={() => navigateToView('main')} 
-            onSuccess={handleAuthSuccess} 
-          />
         )}
 
         {/* View: Authenticated Screen */}

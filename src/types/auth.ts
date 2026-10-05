@@ -2,9 +2,6 @@ export type OAuthProviderType = 'google' | 'github' | 'gitlab';
 
 export type AuthFlowView = 
   | 'main' 
-  | 'google-flow' 
-  | 'github-flow' 
-  | 'gitlab-flow' 
   | 'authenticated'
   | 'connect-engines'
   | 'gemini-key-flow'
