@@ -3,13 +3,17 @@ import { THEME } from '../constants/theme';
 import type { AuthFlowView, AuthUser } from '../types/auth';
 import { 
   getFirebaseConfigStatus, 
+  signInWithGoogle,
+  signInWithGoogleIdToken,
   subscribeToAuthChanges, 
   logoutUser 
 } from '../lib/firebase';
+import { cancelGoogleOneTap, showGoogleOneTap } from '../lib/googleOneTap';
 import { isKeyConnected } from '../lib/keys';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { RevolvingAtmosphere } from './RevolvingAtmosphere';
+import { useGoogleOneTap } from '../hooks/useGoogleOneTap';
 import { GoogleFlowScreen } from './GoogleFlowScreen';
 import { GithubFlowScreen } from './GithubFlowScreen';
 import { GitlabFlowScreen } from './GitlabFlowScreen';
@@ -46,6 +50,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+  const [mainError, setMainError] = useState<string | null>(null);
   const [showFirebaseModal, setShowFirebaseModal] = useState<boolean>(false);
   const [activeGenericEngine, setActiveGenericEngine] = useState<'groq' | 'anthropic' | 'openai' | 'gitlab'>(() => {
     if (typeof window !== 'undefined') {
@@ -108,13 +113,53 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
   }, []);
 
   const handleProviderClick = (provider: 'google' | 'github' | 'gitlab') => {
+    if (provider === 'google') {
+      // Single-click Google sign-in: try the One Tap pill first
+      // (user-gesture-triggered, less likely to be suppressed), fall back
+      // to the classic popup window. No intermediate screen.
+      void handleGoogleDirectSignIn();
+      return;
+    }
     setLoadingProvider(provider);
     setTimeout(() => {
       setLoadingProvider(null);
-      if (provider === 'google') navigateToView('google-flow');
       if (provider === 'github') navigateToView('github-flow');
       if (provider === 'gitlab') navigateToView('gitlab-flow');
     }, 280);
+  };
+
+  const handleGoogleDirectSignIn = async () => {
+    setLoadingProvider('google');
+    setMainError(null);
+    try {
+      if (!configStatus.isConfigured) {
+        // Demo fallback when Firebase isn't configured yet.
+        handleAuthSuccess({
+          uid: 'google-sim-1',
+          displayName: 'Google User',
+          email: 'user@gmail.com',
+          photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+          providerId: 'google.com',
+        });
+        return;
+      }
+      cancelGoogleOneTap();
+      const idToken = await showGoogleOneTap(() => undefined, { context: 'signin', autoSelect: false });
+      if (idToken) {
+        const user = await signInWithGoogleIdToken(idToken);
+        handleAuthSuccess(user);
+        return;
+      }
+      const user = await signInWithGoogle();
+      handleAuthSuccess(user);
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        return;
+      }
+      setMainError(err?.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setLoadingProvider(null);
+    }
   };
 
   /**
@@ -136,6 +181,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
     }
     navigateToView('main');
   };
+
+  // Google One Tap pill ("Continue as ...") top-right.
+  // Keeps the existing popup buttons as fallback — One Tap only shows for
+  // Google-signed-in users and Google may suppress it (cooldown, FedCM).
+  useGoogleOneTap({
+    enabled: !currentUser && (currentView === 'main' || currentView === 'google-flow'),
+    onSuccess: handleAuthSuccess,
+  });
 
   // Delphi Full-Screen Onboarding Views (Distraction-free, zero header/footer clutter)
   if (currentView === 'connect-engines') {
@@ -251,6 +304,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
             </p>
 
             {/* 3 Full-Width Standard 50px Pill Buttons */}
+            {mainError && (
+              <div className="animate-entrance mt-4 p-3 rounded-2xl bg-rose-50 border border-rose-200/80 text-xs text-rose-700 w-full text-center leading-relaxed">
+                {mainError}
+              </div>
+            )}
             <div className="w-full mt-7 sm:mt-[36px] flex flex-col gap-3">
               
               {/* Google Button */}

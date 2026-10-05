@@ -5,6 +5,7 @@ import {
   GithubAuthProvider, 
   OAuthProvider, 
   signInWithPopup, 
+  signInWithCredential,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type Auth,
@@ -84,6 +85,22 @@ export const signInWithGoogle = async (): Promise<AuthUser> => {
     throw new Error('FIREBASE_NOT_CONFIGURED');
   }
   const result = await signInWithPopup(auth, googleProvider);
+  return formatFirebaseUser(result.user, 'google.com');
+};
+
+/**
+ * Sign in with a Google One Tap ID token (Google Identity Services).
+ * GIS returns a JWT ID token; we exchange it for a Firebase session.
+ * The existing "Continue with Google" popup stays as fallback for cases
+ * where One Tap doesn't display (signed out of Google, FedCM blocked,
+ * cooldown, unauthorized origin).
+ */
+export const signInWithGoogleIdToken = async (idToken: string): Promise<AuthUser> => {
+  if (!auth) {
+    throw new Error('FIREBASE_NOT_CONFIGURED');
+  }
+  const credential = GoogleAuthProvider.credential(idToken);
+  const result = await signInWithCredential(auth, credential);
   return formatFirebaseUser(result.user, 'google.com');
 };
 
