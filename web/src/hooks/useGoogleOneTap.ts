@@ -45,8 +45,16 @@ export const useGoogleOneTap = ({
     if (typeof window === 'undefined') return;
 
     const configStatus = getFirebaseConfigStatus();
-    if (!configStatus.isConfigured) return;
-    if (!getGoogleClientId()) return;
+    if (!configStatus.isConfigured) {
+      // eslint-disable-next-line no-console
+      console.warn('[One Tap] skipped: Firebase not configured', configStatus.missingKeys);
+      return;
+    }
+    if (!getGoogleClientId()) {
+      // eslint-disable-next-line no-console
+      console.warn('[One Tap] skipped: VITE_GOOGLE_CLIENT_ID missing in web/.env — restart dev server after adding it');
+      return;
+    }
 
     let cancelled = false;
 

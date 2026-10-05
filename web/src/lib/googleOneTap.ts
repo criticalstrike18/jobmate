@@ -149,13 +149,25 @@ export const showGoogleOneTap = async (
 
     gis.prompt((moment) => {
       options.onPrompt?.(moment);
+      if (moment.isDisplayed()) {
+        // eslint-disable-next-line no-console
+        console.debug('[One Tap] prompt displayed');
+        return;
+      }
       // If Google decided not to show anything, unblock the caller so the
       // regular popup button remains the path forward.
       if (moment.isNotDisplayed() || moment.isSkippedMoment()) {
+        // eslint-disable-next-line no-console
+        console.warn('[One Tap] not displayed:', {
+          notDisplayedReason: moment.getNotDisplayedReason?.(),
+          skippedReason: moment.getSkippedReason?.(),
+        });
         done(null);
       }
       // Dismissed = user closed it; keep fallback button, don't treat as error.
       if (moment.isDismissedMoment()) {
+        // eslint-disable-next-line no-console
+        console.debug('[One Tap] dismissed:', moment.getDismissedReason?.());
         done(null);
       }
     });
