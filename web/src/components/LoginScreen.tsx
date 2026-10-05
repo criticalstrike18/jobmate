@@ -10,6 +10,7 @@ import { isKeyConnected } from '../lib/keys';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { RevolvingAtmosphere } from './RevolvingAtmosphere';
+import { useGoogleOneTap } from '../hooks/useGoogleOneTap';
 import { GoogleFlowScreen } from './GoogleFlowScreen';
 import { GithubFlowScreen } from './GithubFlowScreen';
 import { GitlabFlowScreen } from './GitlabFlowScreen';
@@ -136,6 +137,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateHome }) => {
     }
     navigateToView('main');
   };
+
+  // Google One Tap pill ("Continue as ...") top-right.
+  // Keeps the existing popup buttons as fallback — One Tap only shows for
+  // Google-signed-in users and Google may suppress it (cooldown, FedCM).
+  useGoogleOneTap({
+    enabled: !currentUser && (currentView === 'main' || currentView === 'google-flow'),
+    onSuccess: handleAuthSuccess,
+  });
 
   // Delphi Full-Screen Onboarding Views (Distraction-free, zero header/footer clutter)
   if (currentView === 'connect-engines') {
